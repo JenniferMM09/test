@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Generador y vista compartible del informe diario de mantenimiento de contratos.">
+  <title>Dashboard Mtto Contratos</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2380d3f0'/%3E%3Cpath d='M15 44V27m12 17V18m12 26V31m12 13V23' stroke='%230b2e3b' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E">
+  <style>
+    :root { --sky:#80d3f0; --sky-deep:#3595ba; --ink:#12313d; --muted:#59727d; --line:#d9e7ec; --paper:#fff; --panel:#f8fcfd; --yellow:#ffe45b; --orange:#ffad42; --green:#88cc62; --red:#fa6767; }
+    * { box-sizing:border-box; }
+    html { scroll-behavior:smooth; }
+    body { margin:0; background:linear-gradient(180deg,#f4fbfd 0,#fff 25rem); color:var(--ink); font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; font-size:16px; line-height:1.4; }
+    button,select,input { font:inherit; }
+    button { cursor:pointer; }
+    .shell { max-width:1540px; margin:auto; padding:1.5rem clamp(1rem,3vw,3rem) 4rem; }
+    .topbar { display:flex; align-items:flex-start; justify-content:space-between; gap:1rem; padding:1.1rem 0 1.4rem; border-bottom:4px solid var(--ink); }
+    .eyebrow { margin:0 0 .2rem; color:var(--sky-deep); font-weight:800; font-size:.78rem; letter-spacing:.09em; text-transform:uppercase; }
+    h1 { margin:0; font-size:clamp(1.45rem,3vw,2.45rem); letter-spacing:-.035em; line-height:1.06; }
+    .report-date { margin:.35rem 0 0; color:var(--muted); }
+    .status-chip { display:inline-flex; align-items:center; white-space:nowrap; border:1px solid #aadbed; background:#eaf9ff; color:#195b73; border-radius:999px; padding:.45rem .75rem; font-size:.82rem; font-weight:800; }
+    .upload-screen { max-width:760px; margin:5rem auto; text-align:center; }
+    .upload-screen h1 { font-size:clamp(2rem,5vw,3.5rem); }
+    .upload-screen p { color:var(--muted); max-width:55ch; margin:1rem auto 2rem; }
+    .upload-card { border:2px dashed #82cbe4; border-radius:22px; background:rgba(255,255,255,.92); padding:2.7rem 1.5rem; box-shadow:0 14px 40px rgba(18,49,61,.08); }
+    .upload-card input { position:absolute; inline-size:1px; block-size:1px; opacity:0; overflow:hidden; }
+    .primary-btn,.secondary-btn { border:0; border-radius:10px; padding:.7rem 1rem; font-weight:800; color:#0d3543; transition:transform .16s ease,box-shadow .16s ease; }
+    .primary-btn { background:var(--sky); box-shadow:0 5px 0 #4ba8ca; }
+    .secondary-btn { background:#e9f8fd; border:1px solid #9fd9ec; }
+    .primary-btn:hover,.secondary-btn:hover { transform:translateY(-2px); }
+    .primary-btn:disabled { opacity:.55; cursor:wait; transform:none; }
+    .file-label { display:inline-flex; align-items:center; gap:.55rem; padding:.8rem 1rem; background:var(--sky); border-radius:10px; font-weight:850; color:#0d3543; cursor:pointer; box-shadow:0 5px 0 #4ba8ca; }
+    .file-note { margin:1rem 0 0; font-size:.87rem; }
+    .error { color:#a61f2c; margin-top:1rem; font-weight:650; }
+    .admin-actions { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:.65rem; }
+    .dashboard { display:grid; gap:2rem; }
+    .kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:.85rem; }
+    .kpi { position:relative; min-height:126px; overflow:hidden; padding:1rem; background:var(--paper); border:1px solid var(--line); border-radius:14px; box-shadow:0 7px 20px rgba(29,74,88,.06); }
+    .kpi:before { content:""; position:absolute; inset:0 auto 0 0; width:5px; background:var(--sky); }
+    .kpi-label { display:block; min-height:2.55em; color:var(--muted); font-size:.77rem; font-weight:800; text-transform:uppercase; letter-spacing:.03em; }
+    .kpi-value { display:block; margin-top:.35rem; font-size:1.86rem; font-weight:850; letter-spacing:-.04em; }
+    .kpi-detail { display:block; margin-top:.15rem; font-size:.8rem; color:var(--muted); }
+    .summary-board { display:grid; gap:1rem; }
+    .summary-meta { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:1rem; }
+    .meta-box { display:grid; grid-template-columns:minmax(150px,1fr) minmax(120px,.65fr); align-items:center; min-height:62px; border:1px solid #b8d5e8; background:#fff; }
+    .meta-box span { padding:.72rem .9rem; color:#28475e; font-weight:900; font-size:.85rem; text-transform:uppercase; text-align:center; }
+    .meta-box strong { align-self:stretch; display:grid; place-items:center; padding:.6rem; border-left:3px solid #b6d0e8; background:#e8f1fb; color:#275e93; font-size:1.2rem; }
+    .summary-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:clamp(1rem,3vw,2.5rem); align-items:start; }
+    .summary-column { display:grid; gap:1rem; }
+    .metric-grid { display:grid; gap:3px; padding:3px; background:#b8d5e8; border:1px solid #a9c9e2; }
+    .metric-grid.cols-3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    .metric-grid.cols-2 { grid-template-columns:repeat(2,minmax(0,1fr)); }
+    .metric-box { min-width:0; display:grid; grid-template-rows:minmax(52px,auto) minmax(58px,auto); background:#e8f1fb; text-align:center; }
+    .metric-head { display:grid; place-items:center; padding:.52rem .6rem; background:#6fa9da; color:#fff; font-size:.76rem; line-height:1.15; font-weight:900; text-transform:uppercase; }
+    .metric-value { display:grid; place-items:center; padding:.45rem; color:#203e5c; font-size:clamp(1.45rem,2.4vw,2.15rem); line-height:1; font-weight:900; letter-spacing:-.025em; }
+    .metric-box.highlight .metric-value { background:#77c6e2; color:#fff; }
+    .metric-box.alert .metric-value { color:#e32222; }
+    .tier-grid { display:grid; gap:3px; padding:3px; background:#b8d5e8; border:1px solid #a9c9e2; }
+    .tier-row { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr) 130px; gap:3px; }
+    .tier-row .metric-box { grid-template-rows:minmax(38px,auto) minmax(62px,auto); }
+    .tier-name { display:grid; place-items:center; padding:.7rem .45rem; color:#111; font-size:.86rem; font-weight:950; text-transform:uppercase; }
+    .tier-name.premium { background:#d9f0ca; }
+    .tier-name.preferencial { background:#efc7ef; }
+    .tier-name.estandar { background:#d9d9d9; }
+    .group-caption { margin:0 0 .35rem; color:#5d7785; font-size:.72rem; font-weight:900; letter-spacing:.06em; text-transform:uppercase; }
+    .section { scroll-margin-top:1rem; }
+    .section-head { display:flex; align-items:flex-end; justify-content:space-between; flex-wrap:wrap; gap:.8rem; margin-bottom:.85rem; }
+    .section-title { margin:0; padding:.35rem .75rem; background:var(--sky); color:#12313d; font-size:clamp(1.05rem,2vw,1.3rem); font-weight:900; letter-spacing:.01em; }
+    .section-note { color:var(--muted); font-size:.85rem; }
+    .grid-two { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:1.2rem; }
+    .card { min-width:0; background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:1rem; box-shadow:0 7px 22px rgba(29,74,88,.05); }
+    .card h3 { margin:0 0 .8rem; font-size:1rem; }
+    .table-wrap { overflow:auto; max-width:100%; border-radius:9px; border:1px solid #cfe8f1; }
+    table { width:100%; min-width:520px; border-collapse:collapse; font-size:.84rem; }
+    .daily-table { table-layout:fixed; }
+    .daily-table th,.daily-table td { width:33.333%; }
+    th,td { padding:.42rem .56rem; text-align:center; border-bottom:1px solid #e7f0f3; white-space:nowrap; }
+    th { background:#d9f2fb; color:#173e4d; font-weight:850; }
+    th:first-child,td:first-child { text-align:center; }
+    tbody tr:nth-child(even) { background:#fbfdfe; }
+    tfoot td { background:#c9edf8; border-top:2px solid #65bede; font-weight:900; }
+    .blank { color:#b5c5cb; }
+    .chart { position:relative; width:100%; min-height:285px; margin-top:1rem; overflow:visible; }
+    .chart svg { display:block; width:100%; height:100%; min-height:285px; }
+    .chart [data-chart-tip] { cursor:crosshair; }
+    .chart-tooltip { position:absolute; z-index:10; min-width:150px; max-width:240px; padding:.62rem .72rem; border:1px solid rgba(128,211,240,.7); border-radius:8px; background:rgba(18,49,61,.96); color:#fff; box-shadow:0 10px 28px rgba(18,49,61,.25); font-size:.78rem; line-height:1.3; pointer-events:none; opacity:0; transform:translate(-50%,-105%); transition:opacity .12s ease; }
+    .chart-tooltip.visible { opacity:1; }
+    .chart-tooltip-title { margin-bottom:.38rem; font-weight:900; }
+    .chart-tooltip-row { display:flex; align-items:center; justify-content:space-between; gap:1rem; padding:.12rem 0; }
+    .chart-tooltip-series { display:flex; align-items:center; gap:.35rem; color:#dcebf0; }
+    .chart-tooltip-swatch { width:.55rem; height:.55rem; border-radius:50%; flex:0 0 auto; }
+    .chart-tooltip-value { font-weight:900; white-space:nowrap; }
+    .legend { display:flex; flex-wrap:wrap; gap:.55rem 1rem; margin:.6rem 0 0; font-size:.8rem; color:#36515c; }
+    .legend button { display:inline-flex; align-items:center; gap:.35rem; padding:.3rem .48rem; border:1px solid transparent; border-radius:7px; background:transparent; color:#36515c; font:inherit; font-weight:750; cursor:pointer; transition:opacity .15s ease,background .15s ease,border-color .15s ease; }
+    .legend button:hover,.legend button.active { background:#e8f7fc; border-color:#80d3f0; }
+    .legend button.muted { opacity:.42; }
+    .dot { width:.6rem; height:.6rem; border-radius:50%; display:inline-block; }
+    .filter-row { display:flex; gap:.7rem; align-items:center; flex-wrap:wrap; margin-bottom:.85rem; }
+    .filter-row label { font-weight:800; font-size:.88rem; }
+    select { min-width:220px; max-width:100%; border:1px solid #98cfdf; border-radius:8px; padding:.52rem .6rem; color:var(--ink); background:white; }
+    .seg-table th.segment-standard { background:#e5e5e5; }
+    .seg-table th.segment-pref { background:#f4d3f5; }
+    .seg-table th.segment-premium { background:#dff3cf; }
+    .seg-table td.total-standard { background:#f0f0f0; }
+    .seg-table td.total-pref { background:#fae1fb; }
+    .seg-table td.total-premium { background:#eaf8e1; }
+    .metric-toggle { display:inline-flex; border:1px solid #99d3e5; border-radius:9px; overflow:hidden; }
+    .metric-toggle button { border:0; padding:.42rem .7rem; background:white; color:#35535f; font-size:.82rem; font-weight:850; }
+    .metric-toggle button.active { background:var(--sky); color:#12313d; }
+    .segment-chart-head { display:flex; align-items:center; justify-content:space-between; gap:.8rem; flex-wrap:wrap; margin:1.1rem 0 .8rem; }
+    .segment-chart-head h3 { margin:0; }
+    .donut-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; }
+    .donut-card { min-width:0; padding:.9rem; border:1px solid #d6e8ee; border-radius:12px; background:#fbfdfe; text-align:center; }
+    .donut-card h4 { margin:0 0 .35rem; color:#173e4d; font-size:.95rem; }
+    .donut-chart { min-height:0; margin:0; }
+    .donut-chart svg { width:190px; max-width:100%; height:190px; min-height:0; margin:auto; overflow:visible; }
+    .donut-track { fill:none; stroke:#edf3f5; stroke-width:24; }
+    .donut-slice { fill:none; stroke-width:24; cursor:pointer; transition:opacity .15s ease,stroke-width .15s ease; }
+    .donut-slice:hover,.donut-slice:focus { opacity:.82; stroke-width:28; outline:none; }
+    .donut-total-label { fill:#67808a; font-size:10px; font-weight:750; text-anchor:middle; }
+    .donut-total-value { fill:#173e4d; font-size:19px; font-weight:950; text-anchor:middle; }
+    .donut-legend { display:grid; gap:.38rem; margin-top:.25rem; }
+    .donut-legend div { display:flex; align-items:center; justify-content:space-between; gap:.65rem; padding:.36rem .45rem; border-radius:7px; background:#fff; color:#36515c; font-size:.76rem; }
+    .donut-legend span { display:flex; align-items:center; gap:.35rem; text-align:left; }
+    .donut-legend strong { color:#173e4d; }
+    .compact table { min-width:650px; }
+    .calendar-shell { display:grid; grid-template-columns:minmax(0,1.65fr) minmax(275px,.75fr); gap:1rem; }
+    .calendar-title { display:flex; align-items:center; justify-content:space-between; gap:.7rem; flex-wrap:wrap; margin-bottom:.6rem; }
+    .calendar-title h3 { margin:0; }
+    .calendar-nav { display:flex; align-items:center; gap:.4rem; }
+    .calendar-nav button { border:1px solid #91cede; border-radius:8px; background:#fff; color:var(--ink); padding:.38rem .58rem; font-weight:850; cursor:pointer; }
+    .calendar-nav button:hover { background:var(--sky-soft); }
+    .calendar-period { min-width:145px; text-align:center; font-size:.86rem; font-weight:900; text-transform:capitalize; }
+    .calendar { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:.45rem; }
+    .week-day { padding:.1rem .25rem; color:var(--muted); text-align:center; font-size:.74rem; font-weight:850; text-transform:uppercase; }
+    .cal-day { min-height:104px; padding:.55rem; text-align:left; border:1px solid #dde9ed; border-radius:10px; background:#fff; color:var(--ink); display:flex; flex-direction:column; gap:.35rem; }
+    .cal-day:hover { outline:3px solid rgba(128,211,240,.52); }
+    .cal-day.past { background:var(--red); border-color:#e65353; }
+    .cal-day.today { background:var(--yellow); border-color:#e3c62a; }
+    .cal-day.soon { background:var(--orange); border-color:#ed9326; }
+    .cal-day.later { background:var(--green); border-color:#6dad4a; }
+    .cal-day.weekend { background:#fff; color:#71858c; }
+    .cal-day.selected { outline:4px solid #173e4d; outline-offset:1px; }
+    .cal-day.outside-month { opacity:.62; }
+    .cal-date { font-size:.84rem; font-weight:900; }
+    .cal-count { align-self:flex-start; padding:.15rem .42rem; background:rgba(255,255,255,.76); border-radius:999px; font-size:.76rem; font-weight:900; }
+    .cal-sub { margin-top:auto; font-size:.7rem; opacity:.82; }
+    .calendar-key { display:flex; flex-wrap:wrap; column-gap:1rem; row-gap:.55rem; margin-top:.9rem; padding-top:.65rem; border-top:1px solid #e4eef1; font-size:.75rem; color:var(--muted); }
+    .calendar-key span { display:flex; align-items:center; gap:.25rem; }
+    .key-swatch { width:.7rem; height:.7rem; border-radius:3px; }
+    .alert-detail { position:sticky; top:1rem; align-self:start; min-width:0; }
+    .alert-detail h3 { margin:.1rem 0 .25rem; }
+    .alert-detail p { margin:.25rem 0 .8rem; color:var(--muted); font-size:.84rem; }
+    .alert-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:.55rem; align-items:end; width:100%; margin:.7rem 0; }
+    .alert-filters label { display:grid; min-width:0; gap:.25rem; color:#36515c; font-size:.7rem; font-weight:850; }
+    .alert-filters label:first-child { grid-column:1/-1; }
+    .alert-filters input,.alert-filters select { box-sizing:border-box; display:block; width:100%; max-width:100%; min-width:0; border:1px solid #98cfdf; border-radius:8px; padding:.48rem .55rem; background:#fff; color:var(--ink); font:inherit; }
+    .alert-filter-clear { grid-column:1/-1; box-sizing:border-box; width:100%; min-width:0; border:1px solid #98cfdf; border-radius:8px; padding:.5rem .65rem; background:#eef9fc; color:#173e4d; font-weight:850; cursor:pointer; }
+    .alert-summary { display:grid; grid-template-columns:repeat(2,1fr); gap:.45rem; margin-bottom:.75rem; }
+    .alert-summary div { padding:.48rem; background:#f2fbfe; border-radius:8px; font-size:.75rem; }
+    .alert-summary strong { display:block; font-size:1.12rem; }
+    .alert-rows { width:100%; max-width:100%; max-height:500px; overflow:auto; }
+    .alert-rows table { min-width:0; font-size:.78rem; }
+    .snapshot-note { margin:0; color:var(--muted); font-size:.82rem; }
+    body.snapshot .admin-only { display:none !important; }
+    .empty { padding:1rem; border-radius:9px; background:#f2f8fa; color:var(--muted); font-size:.88rem; }
+    @media (max-width:950px) { .kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .summary-layout,.grid-two,.calendar-shell { grid-template-columns:1fr; } .donut-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .alert-detail { position:static; } }
+    @media (max-width:620px) { .shell { padding-inline:.75rem; } .topbar { align-items:stretch; flex-direction:column; } .admin-actions { justify-content:stretch; } .admin-actions button { flex:1; } .kpis,.summary-meta,.donut-grid,.alert-filters { grid-template-columns:1fr; } .metric-grid.cols-3 { grid-template-columns:1fr; } .tier-row { grid-template-columns:1fr 1fr; } .tier-name { grid-column:1/-1; grid-row:1; } .card { padding:.7rem; } .calendar { gap:.25rem; } .cal-day { min-height:77px; padding:.35rem; } .cal-sub { display:none; } .week-day { font-size:.62rem; } }
+  </style>
+</head>
+<body>
+  <script id="snapshot-data" type="application/json"></script>
+  <main class="shell" id="app" aria-live="polite"></main>
+  <script>
+  (() => {
+    'use strict';
+    const NS='http://schemas.openxmlformats.org/spreadsheetml/2006/main';
+    const REL='http://schemas.openxmlformats.org/officeDocument/2006/relationships';
+    const COLORS=['#289ac2','#f59b35','#7dbc58','#9c6ac8','#ea6d8f','#5885e5'];
+    const MONTHS=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+    const WEEK=['dom','lun','mar','mié','jue','vie','sáb'];
+    const app=document.getElementById('app');
+    let current=null;
+    let chartTooltipsBound=false;
+
+    const esc=value => String(value ?? '').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+    const norm=value => String(value ?? '').trim().toLocaleUpperCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+    const field=(row,...names)=>{for(const name of names){if(Object.prototype.hasOwnProperty.call(row,name))return row[name];const wanted=norm(name),found=Object.keys(row).find(key=>norm(key)===wanted);if(found!==undefined)return row[found];}return '';};
+    const closedStatus=row=>norm(field(row,'Cerrado','cerrado'));
+    const num=value => { const n=Number(value); return Number.isFinite(n)?n:0; };
+    const int=value => Math.round(num(value));
+    const fmt=n => new Intl.NumberFormat('es-CO',{maximumFractionDigits:0}).format(num(n));
+    const pct=n => new Intl.NumberFormat('es-CO',{style:'percent',minimumFractionDigits:2,maximumFractionDigits:2}).format(num(n));
+    const title=value => String(value||'').replace(/\b\w/g,c=>c.toUpperCase());
+    const parseXml=text => new DOMParser().parseFromString(text,'application/xml');
+    const values=(node,name) => Array.from(node.getElementsByTagNameNS(NS,name));
+    const localValues=(node,name) => Array.from(node.getElementsByTagNameNS(NS,name));
+    const cellIndex=ref => { const m=/[A-Z]+/.exec(ref||''); if(!m)return 0; return m[0].split('').reduce((a,c)=>a*26+c.charCodeAt(0)-64,0)-1; };
+    const dayKey=date => `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+    const sameDay=(a,b)=>dayKey(a)===dayKey(b);
+    const atMidnight=d=>new Date(d.getFullYear(),d.getMonth(),d.getDate());
+    const addDays=(d,n)=>{const x=atMidnight(d);x.setDate(x.getDate()+n);return x;};
+    const excelDate=value => { const n=Number(value); if(Number.isFinite(n)&&n>1000){ const d=new Date((n-25569)*86400000); return new Date(d.getUTCFullYear(),d.getUTCMonth(),d.getUTCDate()); } const text=String(value||''); const match=/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})$/.exec(text); return match?new Date(+match[3],+match[2]-1,+match[1]):null; };
+    const monthFromValue=(value, fallbackDate) => { const n=parseInt(String(value||''),10); return Number.isFinite(n)&&n>0&&n<13?n:(fallbackDate?fallbackDate.getMonth()+1:null); };
+    const getText=(cell,tag) => { const item=cell.getElementsByTagNameNS(NS,tag)[0]; return item?item.textContent:''; };
+
+    async function unzip(buffer){
+      const data=new Uint8Array(buffer), view=new DataView(buffer); let end=-1;
+      for(let i=data.length-22;i>=Math.max(0,data.length-65557);i--){ if(view.getUint32(i,true)===0x06054b50){end=i;break;} }
+      if(end<0) throw new Error('El archivo no parece ser un libro de Excel válido.');
+      const count=view.getUint16(end+10,true), cdStart=view.getUint32(end+16,true); let p=cdStart; const files={};
+      for(let i=0;i<count;i++){
+        if(view.getUint32(p,true)!==0x02014b50) throw new Error('No fue posible leer el contenido del Excel.');
+        const method=view.getUint16(p+10,true), size=view.getUint32(p+20,true), nameLen=view.getUint16(p+28,true), extraLen=view.getUint16(p+30,true), commentLen=view.getUint16(p+32,true), local=view.getUint32(p+42,true);
+        const name=new TextDecoder().decode(data.slice(p+46,p+46+nameLen));
+        if(view.getUint32(local,true)!==0x04034b50) throw new Error('El archivo ZIP está incompleto.');
+        const localName=view.getUint16(local+26,true), localExtra=view.getUint16(local+28,true), start=local+30+localName+localExtra, bytes=data.slice(start,start+size);
+        let output;
+        if(method===0) output=bytes;
+        else if(method===8){ if(!('DecompressionStream' in window)) throw new Error('Este navegador no puede abrir archivos Excel localmente. Usa una versión actual de Chrome, Edge, Safari o Firefox.'); output=new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'))).arrayBuffer()); }
+        else throw new Error('El archivo usa una compresión no compatible.');
+        files[name]=new TextDecoder().decode(output); p+=46+nameLen+extraLen+commentLen;
+      }
+      return files;
+    }
+    function sharedStrings(text){ if(!text)return []; const doc=parseXml(text); return values(doc,'si').map(si=>Array.from(si.getElementsByTagNameNS(NS,'t')).map(t=>t.textContent).join('')); }
+    function parseSheet(text,shared){
+      const doc=parseXml(text); const out=[];
+      for(const row of values(doc,'row')){ const rn=Number(row.getAttribute('r')); if(!Number.isFinite(rn))continue; const target=[];
+        for(const c of localValues(row,'c')){ const col=cellIndex(c.getAttribute('r')); const type=c.getAttribute('t'); let value=getText(c,'v');
+          if(type==='s'&&value!=='') value=shared[Number(value)]??'';
+          if(type==='inlineStr') value=getText(c,'t'); target[col]=value;
+        } out[rn-1]=target;
+      } return out;
+    }
+    function parseWorkbook(files){
+      const shared=sharedStrings(files['xl/sharedStrings.xml']); const wb=parseXml(files['xl/workbook.xml']); const relDoc=parseXml(files['xl/_rels/workbook.xml.rels']); const rels={};
+      for(const r of Array.from(relDoc.getElementsByTagName('Relationship'))) rels[r.getAttribute('Id')]=r.getAttribute('Target');
+      const sheets={};
+      for(const s of values(wb,'sheet')){ const id=s.getAttributeNS(REL,'id'); const target=rels[id]; if(!target)continue; const path='xl/'+target.replace(/^\/+/, '').replace(/^\.\.\//,''); if(files[path]) sheets[s.getAttribute('name')]=parseSheet(files[path],shared); }
+      return sheets;
+    }
+    function toRecords(rows){
+      const header=(rows[0]||[]).map(v=>String(v||'').trim()); const records=[];
+      for(let i=1;i<rows.length;i++){ const raw=rows[i]; if(!raw||!raw.length)continue; const item={}; header.forEach((h,index)=>item[h]=raw[index]??''); if(item.Id!==''||item.Radicado!=='') records.push(item); }
+      return records;
+    }
+    function countBusiness(start,end,holidays){ let total=0; for(let d=atMidnight(start);d<=atMidnight(end);d=addDays(d,1)){ if(d.getDay()!==0&&d.getDay()!==6&&!holidays.has(dayKey(d)))total++; } return total; }
+    function businessStep(today,date,holidays){ let n=0; for(let d=addDays(today,1);d<=date;d=addDays(d,1)){if(d.getDay()!==0&&d.getDay()!==6&&!holidays.has(dayKey(d)))n++;} return n; }
+    function buildDaily(records, predicate){
+      const chosen=records.filter(predicate).map(r=>({...r,_date:excelDate(r.Radicado)})).filter(r=>r._date); const months=[...new Map(chosen.map(r=>{const d=r._date;return [`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,{key:`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`,year:d.getFullYear(),month:d.getMonth()}]})).values()].sort((a,b)=>a.key.localeCompare(b.key));
+      const days=[...new Set(chosen.map(r=>r._date.getDate()))].sort((a,b)=>a-b); const cells={}; months.forEach(m=>cells[m.key]={}); chosen.forEach(r=>{const k=`${r._date.getFullYear()}-${String(r._date.getMonth()+1).padStart(2,'0')}`;cells[k][r._date.getDate()]=(cells[k][r._date.getDate()]||0)+1;});
+      return {months:months.map(m=>({...m,label:MONTHS[m.month]})),days,cells,totals:months.map(m=>Object.values(cells[m.key]).reduce((a,b)=>a+b,0))};
+    }
+    function preferredCaseName(a,b){const score=value=>(String(value).match(/[A-ZÁÉÍÓÚÑ]/g)||[]).length,scoreA=score(a),scoreB=score(b);if(scoreB!==scoreA)return scoreB>scoreA?b:a;return String(a).localeCompare(String(b),'es',{sensitivity:'case'})<=0?a:b;}
+    function mergeSegmentUsers(seg){
+      if(!seg||!Array.isArray(seg.data)||!Array.isArray(seg.groups))return seg;
+      const merged=new Map();
+      seg.data.forEach(row=>{const key=norm(row.user).replace(/\s+/g,' ');if(!key)return;let item=merged.get(key);if(!item){const by={};seg.groups.forEach(g=>by[g.id]={greater:0,less:0,total:0});item={user:String(row.user||'').trim(),by,total:0};merged.set(key,item);}else item.user=preferredCaseName(item.user,String(row.user||'').trim());seg.groups.forEach(g=>{const source=row.by&&row.by[g.id]||{};item.by[g.id].greater+=num(source.greater);item.by[g.id].less+=num(source.less);item.by[g.id].total+=num(source.total);});item.total+=num(row.total);});
+      seg.data=[...merged.values()].sort((a,b)=>a.user.localeCompare(b.user,'es',{sensitivity:'base'}));seg.users=seg.data.map(row=>row.user);return seg;
+    }
+    function mergeIndicatorUsers(indicator){
+      if(!indicator||!Array.isArray(indicator.rows))return indicator;
+      const merged=new Map();
+      indicator.rows.forEach(row=>{const key=norm(row.user).replace(/\s+/g,' ');if(!key)return;let item=merged.get(key);if(!item){item={user:String(row.user||'').trim(),counts:[0,0,0]};merged.set(key,item);}else item.user=preferredCaseName(item.user,String(row.user||'').trim());const source=Array.isArray(row.counts)?row.counts:[];item.counts=item.counts.map((value,index)=>value+num(source[index]));});
+      indicator.rows=[...merged.values()].map(row=>{const total=row.counts.reduce((a,b)=>a+b,0);return {...row,total,values:row.counts.map(value=>total?value/total:0)};}).sort((a,b)=>a.user.localeCompare(b.user,'es',{sensitivity:'base'}));
+      return indicator;
+    }
+    function segmentData(records, reportMonth){
+      const rows=records.filter(r=>closedStatus(r)==='S'&&monthFromValue(field(r,'MES RAD.'),excelDate(field(r,'Radicado')))===reportMonth&&monthFromValue(field(r,'MES RTA.'),excelDate(field(r,'F_estado')))===reportMonth);
+      const groups=[
+        {id:'standard',name:'Estándar',limit:5,greater:'MAYOR A 5 DIAS',less:'MENOR A 5 DIAS'},
+        {id:'pref',name:'Preferencial',limit:4,greater:'MAYOR A 4 DIAS',less:'MENOR A 4 DIAS'},
+        {id:'premium',name:'Premium',limit:2,greater:'MAYOR A 2 DIAS',less:'MENOR A 2 DIAS'}
+      ];
+      const make=items=>{ const by={}; groups.forEach(g=>by[g.id]={greater:0,less:0,total:0}); items.forEach(r=>{const s=norm(r['SEGMENTO INTERNO']),o=norm(r['OPORTUNIDAD AGRUPADA POR SEG.']); const g=groups.find(x=>norm(x.name)===s); if(!g)return; if(o===g.greater)by[g.id].greater++; else if(o===g.less)by[g.id].less++; by[g.id].total++;}); const total=groups.reduce((a,g)=>a+by[g.id].total,0); return {by,total}; };
+      const users=[...new Set(rows.map(r=>String(r['Usuario Cierre']||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')); const data=users.map(user=>({user,...make(rows.filter(r=>String(r['Usuario Cierre']||'').trim()===user))})); return mergeSegmentUsers({groups,users,data,total:make(rows)});
+    }
+    function indicatorData(records, reportMonth){
+      const rows=records.filter(r=>closedStatus(r)==='S'&&monthFromValue(field(r,'MES RAD.'),excelDate(field(r,'Radicado')))===reportMonth&&monthFromValue(field(r,'MES RTA.'),excelDate(field(r,'F_estado')))===reportMonth); const buckets=['MENOS DE DOS DIAS','TRES A CINCO DIAS','MAS DE CINCO DIAS'];
+      const make=items=>{const c=[0,0,0];items.forEach(r=>{const o=norm(r['OPORTUNIDAD  GRAL.']); if(o.includes('MENOS'))c[0]++;else if(o.includes('TRES'))c[1]++;else if(o.includes('MAS'))c[2]++;});const total=c.reduce((a,b)=>a+b,0);return {counts:c,total,values:c.map(x=>total?x/total:0)};}; const users=[...new Set(rows.map(r=>String(r['Usuario Cierre']||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')); return mergeIndicatorUsers({buckets,rows:users.map(user=>({user,...make(rows.filter(r=>String(r['Usuario Cierre']||'').trim()===user))})),total:make(rows)});
+    }
+    function openData(records){
+      const rows=records.filter(r=>closedStatus(r)==='N').map(r=>({...r,_date:excelDate(field(r,'Radicado'))})).filter(r=>r._date); const dates=[...new Map(rows.map(r=>[dayKey(r._date),r._date])).values()].sort((a,b)=>a-b); const users=[...new Set(rows.map(r=>String(field(r,'Responsable')||'').trim()).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')); const values={};users.forEach(u=>values[u]={});rows.forEach(r=>{const u=String(field(r,'Responsable')||'').trim(),k=dayKey(r._date);values[u][k]=(values[u][k]||0)+1;});return {dates,users,values};
+    }
+    function alertData(records){ const by={}; records.filter(r=>closedStatus(r)==='N').forEach(r=>{const d=excelDate(field(r,'VENCE CASO'));if(!d)return;const k=dayKey(d);if(!by[k])by[k]=[];by[k].push({id:String(field(r,'Id')||''),responsable:String(field(r,'Responsable')||''),segmento:String(field(r,'SEGMENTO INTERNO')||'').trim()||'Sin segmento'});});return by; }
+    function derive(sheets){
+      const raw=sheets['NE CONSULTA']; if(!raw)throw new Error('No se encontró la hoja “NE CONSULTA”.'); const records=toRecords(raw); if(!records.length)throw new Error('La hoja “NE CONSULTA” no tiene registros legibles.'); const info=sheets.INFORME||[]; const c5=(info[4]||[])[2], b2=(info[1]||[])[1], b20=(info[19]||[])[1]; const cutoff=excelDate(c5)||new Date(); const start=excelDate(b2)||new Date(cutoff.getFullYear(),cutoff.getMonth(),1);
+      const holidayRows=sheets.FESTIVOS||[];const holidays=new Set(holidayRows.slice(1).map(r=>excelDate(r&&r[0])).filter(Boolean).map(dayKey)); const reportMonth=cutoff.getMonth()+1;
+      const dailyRad=buildDaily(records,()=>true), dailyClosed=buildDaily(records,r=>closedStatus(r)==='S'); const currentRecords=records.filter(r=>monthFromValue(field(r,'MES RAD.'),excelDate(field(r,'Radicado')))===reportMonth); const prev=new Date(cutoff.getFullYear(),cutoff.getMonth()-1,1); const prevRecords=records.filter(r=>{const d=excelDate(field(r,'Radicado'));return d&&d.getFullYear()===prev.getFullYear()&&d.getMonth()===prev.getMonth();}); const calculatedClosed=currentRecords.filter(r=>closedStatus(r)==='S').length,calculatedOpen=records.filter(r=>closedStatus(r)==='N').length; const closedCurrent=calculatedClosed||num((info[14]||[])[1]),open=calculatedOpen||num((info[14]||[])[3]); const currentDay=currentRecords.filter(r=>{const d=excelDate(field(r,'Radicado'));return d&&sameDay(d,cutoff);}).length; const priorDay=currentRecords.filter(r=>{const d=excelDate(field(r,'Radicado'));return d&&sameDay(d,addDays(cutoff,-1));}).length;
+      return {generatedAt:new Date().toISOString(),cutoff:dayKey(cutoff),holidays:[...holidays],kpis:{radCurrent:currentRecords.length,radPrevious:prevRecords.length,businessDays:countBusiness(start,cutoff,holidays),dailyVariation:priorDay?currentDay/priorDay-1:null,closed:closedCurrent,open,openPrevious:num(b20),cutoffLabel:cutoff.toLocaleDateString('es-CO',{weekday:'long',day:'2-digit',month:'long',year:'numeric'})},dailyRad,dailyClosed,segments:segmentData(records,reportMonth),indicator:indicatorData(records,reportMonth),openTable:openData(records),alerts:alertData(records)};
+    }
+    function statCard(label,value,detail){return `<article class="kpi"><span class="kpi-label">${esc(label)}</span><strong class="kpi-value">${value}</strong>${detail?`<span class="kpi-detail">${esc(detail)}</span>`:''}</article>`;}
+    function dailyTable(data,title){ const header=data.months.map(m=>`<th>${esc(m.label)}</th>`).join(''); const rows=data.days.map(day=>`<tr><td>${String(day).padStart(2,'0')}</td>${data.months.map(m=>{const v=data.cells[m.key][day];return `<td class="${v?'':'blank'}">${v?fmt(v):'—'}</td>`}).join('')}</tr>`).join('');return `<div class="table-wrap"><table class="daily-table"><thead><tr><th>${esc(title)}</th>${header}</tr></thead><tbody>${rows}</tbody><tfoot><tr><td>Total general</td>${data.totals.map(v=>`<td>${fmt(v)}</td>`).join('')}</tr></tfoot></table></div>`; }
+    const tipData=(title,rows)=>encodeURIComponent(JSON.stringify({title,rows}));
+    function lineChart(data,label){
+      const w=760,h=300,p={l:42,r:18,t:20,b:47},iw=w-p.l-p.r,ih=h-p.t-p.b;
+      const all=data.months.flatMap(m=>data.days.map(d=>data.cells[m.key][d]||0)),max=Math.max(1,...all);
+      const x=i=>p.l+(data.days.length<2?iw/2:i*iw/(data.days.length-1)),y=v=>p.t+ih-(v/max)*ih;
+      const grid=[0,.25,.5,.75,1].map(r=>`<line x1="${p.l}" x2="${w-p.r}" y1="${y(max*r)}" y2="${y(max*r)}" stroke="#d9e7ec"/><text x="${p.l-7}" y="${y(max*r)+4}" text-anchor="end" fill="#59727d" font-size="11">${fmt(max*r)}</text>`).join('');
+      const lines=data.months.map((m,i)=>{const points=data.days.map((d,j)=>`${x(j)},${y(data.cells[m.key][d]||0)}`).join(' ');return `<g data-line-series-shape="${esc(m.key)}"><polyline points="${points}" fill="none" stroke="${COLORS[i%COLORS.length]}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>${data.days.map((d,j)=>`<circle cx="${x(j)}" cy="${y(data.cells[m.key][d]||0)}" r="3.2" fill="${COLORS[i%COLORS.length]}" pointer-events="none"/>`).join('')}</g>`;}).join('');
+      const ticks=data.days.map((d,i)=>`<text x="${x(i)}" y="${h-20}" text-anchor="middle" fill="#59727d" font-size="11">${d}</text>`).join('');
+      const hits=data.days.map((day,i)=>{const left=i===0?p.l:(x(i-1)+x(i))/2,right=i===data.days.length-1?w-p.r:(x(i)+x(i+1))/2;const rows=data.months.map((m,j)=>({key:m.key,label:m.label,value:`${fmt(data.cells[m.key][day]||0)} casos`,color:COLORS[j%COLORS.length]}));const aria=`Día ${day}. `+rows.map(r=>`${r.label}: ${r.value}`).join(', ');return `<rect x="${left}" y="${p.t}" width="${Math.max(1,right-left)}" height="${ih}" fill="transparent" tabindex="0" role="img" aria-label="${esc(aria)}" data-chart-tip data-guide-x="${x(i)}" data-tip="${tipData(`Día ${day}`,rows)}"/>`;}).join('');
+      return `<div class="line-chart" data-line-chart><div class="chart" aria-label="${esc(label)}"><svg role="img" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none"><title>${esc(label)}</title>${grid}<line x1="${p.l}" x2="${w-p.r}" y1="${p.t+ih}" y2="${p.t+ih}" stroke="#8bbecd"/>${lines}${ticks}<line data-hover-guide x1="0" x2="0" y1="${p.t}" y2="${p.t+ih}" stroke="#12313d" stroke-width="1" opacity="0" pointer-events="none"/>${hits}</svg><div class="chart-tooltip" role="tooltip"></div></div><div class="legend" role="group" aria-label="Filtrar meses del gráfico">${data.months.map((m,i)=>`<button type="button" data-line-series="${esc(m.key)}" aria-pressed="false"><i class="dot" style="background:${COLORS[i%COLORS.length]}"></i>${esc(m.label)}</button>`).join('')}</div></div>`;
+    }
+    function segmentCells(entry,kind){ return entry.groups?'' : ''; }
+    function segmentRow(entry,groups,mode,isTotal=false){const c=entry.by;const val=(v,total)=>mode==='percentage'?pct(total?v/total:0):fmt(v);return `<tr${isTotal?' class="total-row"':''}><td>${esc(entry.user||'Total general')}</td>${groups.map(g=>`<td>${val(c[g.id].greater,c[g.id].total)}</td><td>${val(c[g.id].less,c[g.id].total)}</td><td class="total-${g.id==='standard'?'standard':g.id==='pref'?'pref':'premium'}">${mode==='percentage'?pct(entry.total?c[g.id].total/entry.total:0):fmt(c[g.id].total)}</td>`).join('')}<td>${mode==='percentage'?pct(entry.total?1:0):fmt(entry.total)}</td></tr>`;}
+    function segmentTable(seg,selected,mode){const list=selected==='__all__'?seg.data:seg.data.filter(r=>r.user===selected);const heads=seg.groups.map(g=>`<th colspan="3" class="segment-${g.id==='standard'?'standard':g.id==='pref'?'pref':'premium'}">${esc(g.name)}</th>`).join('');const sub=seg.groups.map(g=>`<th>Mayor a ${g.limit} días</th><th>Menor a ${g.limit} días</th><th>Total ${esc(g.name)}</th>`).join('');return `<div class="table-wrap"><table class="seg-table"><thead><tr><th rowspan="2">Usuario cierre</th>${heads}<th rowspan="2">Total general</th></tr><tr>${sub}</tr></thead><tbody>${list.map(r=>segmentRow(r,seg.groups,mode)).join('')||'<tr><td colspan="11">No hay datos para la persona seleccionada.</td></tr>'}</tbody>${selected==='__all__'?`<tfoot>${segmentRow(seg.total,seg.groups,mode,true)}</tfoot>`:''}</table></div>`;}
+    function pieCharts(seg,selected,mode){
+      const entry=selected==='__all__'?seg.total:seg.data.find(r=>r.user===selected)||seg.total,palettes={standard:['#667884','#c5d0d6'],pref:['#aa55b0','#edc8ef'],premium:['#579f39','#c8e8b9']};
+      const card=g=>{const values=entry.by[g.id]||{greater:0,less:0,total:0},total=values.total||0,greaterRatio=total?values.greater/total:0,lessRatio=total?values.less/total:0,colors=palettes[g.id],show=value=>mode==='percentage'?pct(total?value/total:0):fmt(value),greaterLabel=`Mayor a ${g.limit} días`,lessLabel=`Menor a ${g.limit} días`,greaterTip=tipData(`${g.name} · ${greaterLabel}`,[{label:mode==='percentage'?'Porcentaje':'Cantidad',value:mode==='percentage'?show(values.greater):`${show(values.greater)} casos`,color:colors[0]}]),lessTip=tipData(`${g.name} · ${lessLabel}`,[{label:mode==='percentage'?'Porcentaje':'Cantidad',value:mode==='percentage'?show(values.less):`${show(values.less)} casos`,color:colors[1]}]);return `<article class="donut-card"><h4>${esc(g.name)}</h4><div class="chart donut-chart"><svg role="img" aria-label="${esc(`Distribución ${g.name}`)}" viewBox="0 0 160 160"><circle class="donut-track" cx="80" cy="80" r="52"/><circle class="donut-slice" cx="80" cy="80" r="52" pathLength="100" stroke="${colors[0]}" stroke-dasharray="${greaterRatio*100} ${100-greaterRatio*100}" transform="rotate(-90 80 80)" tabindex="0" aria-label="${esc(`${greaterLabel}: ${show(values.greater)}`)}" data-chart-tip data-tip="${greaterTip}"/><circle class="donut-slice" cx="80" cy="80" r="52" pathLength="100" stroke="${colors[1]}" stroke-dasharray="${lessRatio*100} ${100-lessRatio*100}" stroke-dashoffset="${-greaterRatio*100}" transform="rotate(-90 80 80)" tabindex="0" aria-label="${esc(`${lessLabel}: ${show(values.less)}`)}" data-chart-tip data-tip="${lessTip}"/><text class="donut-total-label" x="80" y="74">Total</text><text class="donut-total-value" x="80" y="96">${fmt(total)}</text></svg><div class="chart-tooltip" role="tooltip"></div></div><div class="donut-legend"><div><span><i class="dot" style="background:${colors[0]}"></i>${esc(greaterLabel)}</span><strong>${show(values.greater)}</strong></div><div><span><i class="dot" style="background:${colors[1]}"></i>${esc(lessLabel)}</span><strong>${show(values.less)}</strong></div></div></article>`;};
+      return `<div class="donut-grid">${seg.groups.map(card).join('')}</div>`;
+    }
+    function bindChartTooltips(){
+      if(chartTooltipsBound)return;
+      chartTooltipsBound=true;
+      const markFrom=target=>target&&target.closest?target.closest('[data-chart-tip]'):null;
+      const hide=mark=>{const chart=mark&&mark.closest('.chart');if(!chart)return;const tip=chart.querySelector('.chart-tooltip'),guide=chart.querySelector('[data-hover-guide]');if(tip)tip.classList.remove('visible');if(guide)guide.setAttribute('opacity','0');};
+      const show=(mark,event)=>{
+        const chart=mark&&mark.closest('.chart'),tip=chart&&chart.querySelector('.chart-tooltip');if(!chart||!tip)return;
+        let payload;try{payload=JSON.parse(decodeURIComponent(mark.dataset.tip));}catch{return;}
+        const lineChart=mark.closest('[data-line-chart]'),activeSeries=lineChart&&lineChart.dataset.activeSeries,visibleRows=activeSeries?payload.rows.filter(row=>row.key===activeSeries):payload.rows;
+        tip.innerHTML=`<div class="chart-tooltip-title">${esc(payload.title)}</div>${visibleRows.map(row=>`<div class="chart-tooltip-row"><span class="chart-tooltip-series"><i class="chart-tooltip-swatch" style="background:${/^#[0-9a-f]{6}$/i.test(row.color)?row.color:'#80d3f0'}"></i>${esc(row.label)}</span><span class="chart-tooltip-value">${esc(row.value)}</span></div>`).join('')}`;
+        tip.classList.add('visible');
+        const chartRect=chart.getBoundingClientRect(),markRect=mark.getBoundingClientRect();let x=event&&Number.isFinite(event.clientX)?event.clientX-chartRect.left:markRect.left-chartRect.left+markRect.width/2;let y=event&&Number.isFinite(event.clientY)?event.clientY-chartRect.top:markRect.top-chartRect.top;
+        const half=tip.offsetWidth/2;x=Math.max(half+8,Math.min(chartRect.width-half-8,x));y=Math.max(tip.offsetHeight+12,y);tip.style.left=`${x}px`;tip.style.top=`${y}px`;
+        const guide=chart.querySelector('[data-hover-guide]');if(guide&&mark.dataset.guideX){guide.setAttribute('x1',mark.dataset.guideX);guide.setAttribute('x2',mark.dataset.guideX);guide.setAttribute('opacity','.45');}
+      };
+      app.addEventListener('pointerover',event=>{const mark=markFrom(event.target);if(mark)show(mark,event);});
+      app.addEventListener('pointermove',event=>{const mark=markFrom(event.target);if(mark)show(mark,event);});
+      app.addEventListener('pointerout',event=>{const mark=markFrom(event.target);if(mark&&mark!==markFrom(event.relatedTarget))hide(mark);});
+      app.addEventListener('pointerdown',event=>{const mark=markFrom(event.target);if(mark)show(mark,event);});
+      app.addEventListener('focusin',event=>{const mark=markFrom(event.target);if(mark)show(mark);});
+      app.addEventListener('focusout',event=>{const mark=markFrom(event.target);if(mark)hide(mark);});
+      app.addEventListener('click',event=>{const metricControl=event.target.closest&&event.target.closest('[data-metric]');if(metricControl){current.metric=metricControl.dataset.metric;refreshSegments(false);return;}const control=event.target.closest&&event.target.closest('[data-line-series]');if(!control)return;const lineChart=control.closest('[data-line-chart]'),key=control.dataset.lineSeries,active=lineChart.dataset.activeSeries===key?'':key;lineChart.dataset.activeSeries=active;lineChart.querySelectorAll('[data-line-series-shape]').forEach(shape=>{shape.style.display=!active||shape.dataset.lineSeriesShape===active?'':'none';});lineChart.querySelectorAll('[data-line-series]').forEach(button=>{const selected=Boolean(active)&&button.dataset.lineSeries===active;button.classList.toggle('active',selected);button.classList.toggle('muted',Boolean(active)&&!selected);button.setAttribute('aria-pressed',selected?'true':'false');});});
+    }
+    function indicatorTable(data){return `<div class="table-wrap"><table><thead><tr><th>Usuario cierre</th>${data.buckets.map(b=>`<th>${esc(title(b.toLowerCase()))}</th>`).join('')}<th>Total general</th></tr></thead><tbody>${data.rows.map(r=>`<tr><td>${esc(r.user)}</td>${r.values.map(v=>`<td>${pct(v)}</td>`).join('')}<td>100,00%</td></tr>`).join('')}</tbody><tfoot><tr><td>Total general</td>${data.total.values.map(v=>`<td>${pct(v)}</td>`).join('')}<td>100,00%</td></tr></tfoot></table></div>`;}
+    function openTable(data){const rowTotal=user=>data.dates.reduce((sum,date)=>sum+(data.values[user][dayKey(date)]||0),0),users=[...data.users].sort((a,b)=>rowTotal(b)-rowTotal(a)||a.localeCompare(b,'es',{sensitivity:'base'})),heads=data.dates.map(d=>`<th>${MONTHS[d.getMonth()]} ${String(d.getDate()).padStart(2,'0')}</th>`).join(''),totals=data.dates.map(d=>users.reduce((a,u)=>a+(data.values[u][dayKey(d)]||0),0));return `<div class="table-wrap"><table><thead><tr><th>Responsable</th>${heads}<th>Total general</th></tr></thead><tbody>${users.map(u=>{const total=rowTotal(u);return `<tr><td>${esc(u)}</td>${data.dates.map(d=>{const v=data.values[u][dayKey(d)]||0;return `<td class="${v?'':'blank'}">${v?fmt(v):'—'}</td>`}).join('')}<td>${fmt(total)}</td></tr>`;}).join('')}</tbody><tfoot><tr><td>Total general</td>${totals.map(v=>`<td>${fmt(v)}</td>`).join('')}<td>${fmt(totals.reduce((a,b)=>a+b,0))}</td></tr></tfoot></table></div>`;}
+    function calendarClass(date,today,holidays,itemCount=0){if(date<today)return itemCount>0?'past':'weekend';if(sameDay(date,today))return'today';if(holidays.has(dayKey(date)))return'weekend';const step=businessStep(today,date,holidays);if(step<=2)return'soon';return itemCount>0?'later':'weekend';}
+    function renderCalendar(snapshot,selectedKey,viewDate){const today=atMidnight(new Date()),holidays=new Set(snapshot.holidays||[]),cursor=viewDate||today,monthStart=new Date(cursor.getFullYear(),cursor.getMonth(),1),monthEnd=new Date(cursor.getFullYear(),cursor.getMonth()+1,0),start=addDays(monthStart,-((monthStart.getDay()+6)%7)),end=addDays(monthEnd,(5-monthEnd.getDay()+7)%7);let dates=[];for(let d=start;d<=end;d=addDays(d,1)){if(d.getDay()!==0&&d.getDay()!==6)dates.push(d);}const selected=selectedKey||dayKey(today),period=monthStart.toLocaleDateString('es-CO',{month:'long',year:'numeric'});const boxes=dates.map(d=>{const key=dayKey(d),items=snapshot.alerts[key]||[],cl=calendarClass(d,today,holidays,items.length),outside=d.getMonth()!==monthStart.getMonth();return `<button class="cal-day ${cl} ${outside?'outside-month':''} ${key===selected?'selected':''}" data-alert-date="${key}" aria-label="Ver alertas del ${d.toLocaleDateString('es-CO')}"><span class="cal-date">${d.getDate()} ${MONTHS[d.getMonth()]}</span><span class="cal-count">${items.length} caso${items.length===1?'':'s'}</span><span class="cal-sub">${d.toLocaleDateString('es-CO',{weekday:'short'})}</span></button>`;}).join('');return `<div class="calendar-title"><h3>Alertas por segmento</h3><div class="calendar-nav" aria-label="Navegación del calendario"><button type="button" data-calendar-shift="-1" aria-label="Mes anterior">←</button><span class="calendar-period">${esc(period)}</span><button type="button" data-calendar-shift="1" aria-label="Mes siguiente">→</button><button type="button" data-calendar-today>Hoy</button></div></div><div class="calendar">${WEEK.slice(1,6).map(x=>`<div class="week-day">${x}</div>`).join('')}${boxes}</div><div class="calendar-key"><span><i class="key-swatch" style="background:var(--red)"></i>Vencido</span><span><i class="key-swatch" style="background:var(--yellow)"></i>Vence hoy</span><span><i class="key-swatch" style="background:var(--orange)"></i>Vence en los próximos 2 días hábiles</span><span><i class="key-swatch" style="background:var(--green)"></i>Vence después de 3 días hábiles</span></div>`;}
+    function alertDetails(snapshot,key){
+      const items=snapshot.alerts[key]||[],counts={ESTANDAR:0,PREFERENCIAL:0,PREMIUM:0};items.forEach(x=>{const k=norm(x.segmento);if(counts[k]!==undefined)counts[k]++;});const date=new Date(`${key}T12:00:00`),responsibles=[...new Set(items.map(x=>x.responsable).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),segments=[...new Set(items.map(x=>x.segmento).filter(Boolean))].sort((a,b)=>a.localeCompare(b,'es')),ids=[...new Set(items.map(x=>x.id).filter(Boolean))].sort();
+      return `<h3>${esc(date.toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long'}))}</h3><p data-alert-result-count>${items.length?`${items.length} caso${items.length===1?'':'s'} abierto${items.length===1?'':'s'} con vencimiento en esta fecha.`:'No hay casos abiertos con vencimiento en esta fecha.'}</p><div class="alert-summary"><div>Estándar<strong data-alert-summary="ESTANDAR">${fmt(counts.ESTANDAR)}</strong></div><div>Preferencial<strong data-alert-summary="PREFERENCIAL">${fmt(counts.PREFERENCIAL)}</strong></div><div>Premium<strong data-alert-summary="PREMIUM">${fmt(counts.PREMIUM)}</strong></div><div>Total general<strong data-alert-summary="TOTAL">${fmt(items.length)}</strong></div></div>${items.length?`<div class="alert-filters"><label>ID<input id="alert-id-filter" type="search" list="alert-id-options" placeholder="Buscar o seleccionar ID" autocomplete="off"><datalist id="alert-id-options">${ids.map(id=>`<option value="${esc(id)}"></option>`).join('')}</datalist></label><label>Responsable<select id="alert-responsible-filter"><option value="">Todos</option>${responsibles.map(value=>`<option value="${esc(value)}">${esc(value)}</option>`).join('')}</select></label><label>Segmento<select id="alert-segment-filter"><option value="">Todos</option>${segments.map(value=>`<option value="${esc(value)}">${esc(title(value.toLowerCase()))}</option>`).join('')}</select></label><button class="alert-filter-clear" type="button" id="alert-filter-clear">Limpiar</button></div><div class="alert-rows"><div class="table-wrap"><table><thead><tr><th>ID</th><th>Responsable</th><th>Segmento</th></tr></thead><tbody>${items.map(x=>`<tr data-alert-row data-id="${esc(x.id)}" data-responsible="${esc(x.responsable)}" data-segment="${esc(x.segmento)}"><td>${esc(x.id)}</td><td>${esc(x.responsable)}</td><td>${esc(title(x.segmento.toLowerCase()))}</td></tr>`).join('')}</tbody></table></div></div>`:''}`;
+    }
+    function bindAlertFilters(){const panel=document.getElementById('alert-detail'),idInput=panel&&panel.querySelector('#alert-id-filter'),responsible=panel&&panel.querySelector('#alert-responsible-filter'),segment=panel&&panel.querySelector('#alert-segment-filter');if(!idInput||!responsible||!segment)return;const rows=[...panel.querySelectorAll('[data-alert-row]')],status=panel.querySelector('[data-alert-result-count]'),apply=()=>{const id=idInput.value.trim().toLocaleLowerCase('es-CO'),person=responsible.value,seg=segment.value,counts={ESTANDAR:0,PREFERENCIAL:0,PREMIUM:0},visible=[];rows.forEach(row=>{const show=(!id||row.dataset.id.toLocaleLowerCase('es-CO').includes(id))&&(!person||row.dataset.responsible===person)&&(!seg||row.dataset.segment===seg);row.hidden=!show;if(show){visible.push(row);const kind=norm(row.dataset.segment);if(counts[kind]!==undefined)counts[kind]++;}});Object.entries(counts).forEach(([kind,value])=>{const target=panel.querySelector(`[data-alert-summary="${kind}"]`);if(target)target.textContent=fmt(value);});const total=panel.querySelector('[data-alert-summary="TOTAL"]');if(total)total.textContent=fmt(visible.length);if(status)status.textContent=`Mostrando ${visible.length} de ${rows.length} caso${rows.length===1?'':'s'} con vencimiento en esta fecha.`;};idInput.addEventListener('input',apply);responsible.addEventListener('change',apply);segment.addEventListener('change',apply);const clear=panel.querySelector('#alert-filter-clear');if(clear)clear.addEventListener('click',()=>{idInput.value='';responsible.value='';segment.value='';apply();idInput.focus();});}
+    function metricBox(label,value,kind=''){return `<div class="metric-box ${kind}"><div class="metric-head">${esc(label)}</div><div class="metric-value">${value}</div></div>`;}
+    function restoreSnapshotTypes(snapshot){
+      if(snapshot&&snapshot.openTable&&Array.isArray(snapshot.openTable.dates)){
+        snapshot.openTable.dates=snapshot.openTable.dates.map(value=>value instanceof Date?value:new Date(value));
+      }
+      if(snapshot&&snapshot.segments)snapshot.segments=mergeSegmentUsers(snapshot.segments);
+      if(snapshot&&snapshot.indicator)snapshot.indicator=mergeIndicatorUsers(snapshot.indicator);
+      return snapshot;
+    }
+    function renderDashboard(snapshot){
+      snapshot=restoreSnapshotTypes(snapshot);
+      current={snapshot,person:'__all__',metric:'percentage',alertDate:dayKey(atMidnight(new Date())),calendarMonth:new Date(new Date().getFullYear(),new Date().getMonth(),1)};
+      document.body.classList.toggle('snapshot',!!document.getElementById('snapshot-data').textContent.trim());
+      const k=snapshot.kpis,cutoff=new Date(`${snapshot.cutoff}T12:00:00`),previousDay=addDays(cutoff,-1);
+      const variation=k.radPrevious?(k.radCurrent-k.radPrevious)/k.radPrevious:null,progress=k.radCurrent?k.closed/k.radCurrent:0,openVar=k.openPrevious?(k.open-k.openPrevious)/k.openPrevious:null;
+      const shortDate=d=>d.toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'2-digit'});
+      const segmentTotals=snapshot.segments.total.by;
+      const tier=(id,name,limit,css)=>{const data=segmentTotals[id]||{less:0,greater:0,total:0};return `<div class="tier-row">${metricBox(`Casos cerrados < ${limit} días`,pct(data.total?data.less/data.total:0))}${metricBox(`Casos cerrados > ${limit} días`,pct(data.total?data.greater/data.total:0))}<div class="tier-name ${css}">${esc(name)}</div></div>`;};
+      app.innerHTML=`
+        <header class="topbar">
+          <div><p class="eyebrow">Informe diario · mantenimiento de contratos</p><h1>DASHBOARD DIARIO ÁREA MANTENIMIENTO DE CONTRATOS</h1></div>
+          <div class="admin-actions admin-only"><button class="secondary-btn" id="new-file">Cargar otro Excel</button><button class="primary-btn" id="download">Descargar dashboard HTML</button></div>
+        </header>
+        <div class="dashboard">
+          <section class="summary-board" aria-label="Indicadores principales">
+            <div class="summary-meta">
+              <div class="meta-box"><span>Fecha de corte</span><strong>${shortDate(cutoff)}</strong></div>
+              <div class="meta-box"><span>Días hábiles hasta fecha de corte</span><strong>${fmt(k.businessDays)}</strong></div>
+            </div>
+            <div class="summary-layout">
+              <div class="summary-column">
+                <div><p class="group-caption">Radicación mensual</p><div class="metric-grid cols-3">
+                  ${metricBox('Casos radicados (total del mes)',fmt(k.radCurrent))}
+                  ${metricBox('Casos radicados mes anterior',fmt(k.radPrevious),'highlight')}
+                  ${metricBox('% variación con respecto al mes anterior',variation===null?'—':pct(variation))}
+                </div></div>
+                <div><p class="group-caption">Gestión del mes</p><div class="metric-grid cols-3">
+                  ${metricBox('Casos cerrados mes actual',fmt(k.closed))}
+                  ${metricBox('% avance en la gestión del mes',pct(progress))}
+                  ${metricBox(`Casos abiertos al día ${shortDate(cutoff)}`,fmt(k.open),'alert')}
+                </div></div>
+                <div><p class="group-caption">Comparativo de casos abiertos</p><div class="metric-grid cols-2">
+                  ${metricBox(`Casos abiertos al día ${shortDate(previousDay)}`,fmt(k.openPrevious),'highlight')}
+                  ${metricBox('% variación de casos abiertos con respecto al día anterior',openVar===null?'—':pct(openVar))}
+                </div></div>
+              </div>
+              <div class="summary-column">
+                <div><p class="group-caption">Ritmo diario</p><div class="metric-grid cols-2">
+                  ${metricBox('Promedio de casos diarios radicados',fmt(k.businessDays?k.radCurrent/k.businessDays:0))}
+                  ${metricBox('% variación diaria de radicados',k.dailyVariation===null?'—':pct(k.dailyVariation),'highlight')}
+                </div></div>
+                <div><p class="group-caption">Cumplimiento por segmento</p><div class="tier-grid">
+                  ${tier('premium','Premium',2,'premium')}
+                  ${tier('pref','Preferencial',4,'preferencial')}
+                  ${tier('standard','Estándar',5,'estandar')}
+                </div></div>
+              </div>
+            </div>
+          </section>
+          <section class="section"><div class="section-head"><h2 class="section-title">Alertas por segmento · casos abiertos</h2></div><div class="card"><div class="calendar-shell"><div id="calendar"></div><aside class="alert-detail" id="alert-detail"></aside></div></div></section>
+          <section class="section"><div class="section-head"><h2 class="section-title">Casos cerrados por segmento</h2></div><div class="card"><div class="filter-row"><label for="person-filter">Usuario cierre</label><select id="person-filter"><option value="__all__">General</option>${snapshot.segments.users.map(u=>`<option value="${esc(u)}">${esc(u)}</option>`).join('')}</select></div><div id="segments-count"></div><div style="height:1rem"></div><div id="segments-percent"></div><div id="segment-chart"></div></div></section>
+          <section class="section compact"><div class="section-head"><h2 class="section-title">Casos abiertos por ejecutivo y responsable externo</h2></div><div class="card">${openTable(snapshot.openTable)}</div></section>
+          <section class="section"><div class="section-head"><h2 class="section-title">Casos radicados y cerrados</h2></div><div class="grid-two"><article class="card"><h3>Casos radicados (total del mes)</h3>${dailyTable(snapshot.dailyRad,'Día')}${lineChart(snapshot.dailyRad,'Gráfico de casos radicados diarios')}</article><article class="card"><h3>Casos cerrados (total del mes)</h3>${dailyTable(snapshot.dailyClosed,'Día')}${lineChart(snapshot.dailyClosed,'Gráfico de casos cerrados diarios')}</article></div></section>
+          <section class="section compact"><div class="section-head"><h2 class="section-title">Casos cerrados indicador general</h2></div><div class="card">${indicatorTable(snapshot.indicator)}</div></section>
+        </div>`;
+      refreshSegments();refreshCalendar();bindChartTooltips();
+      if(!document.body.classList.contains('snapshot')){document.getElementById('download').addEventListener('click',downloadSnapshot);document.getElementById('new-file').addEventListener('click',renderUpload);}
+      document.getElementById('person-filter').addEventListener('change',e=>{current.person=e.target.value;refreshSegments();});
+    }
+    function refreshSegments(showTables=true){const s=current.snapshot.segments;if(showTables){document.getElementById('segments-count').innerHTML=`<h3>Valores</h3>${segmentTable(s,current.person,'count')}`;document.getElementById('segments-percent').innerHTML=`<h3>Porcentajes</h3>${segmentTable(s,current.person,'percentage')}`;}document.getElementById('segment-chart').innerHTML=`<div class="segment-chart-head"><h3>Distribución por segmento</h3><div class="metric-toggle" aria-label="Métrica de los gráficos"><button data-metric="percentage" class="${current.metric==='percentage'?'active':''}">Porcentajes</button><button data-metric="count" class="${current.metric==='count'?'active':''}">Cantidades</button></div></div>${pieCharts(s,current.person,current.metric)}`;}
+    function refreshCalendar(){const calendar=document.getElementById('calendar');calendar.innerHTML=renderCalendar(current.snapshot,current.alertDate,current.calendarMonth);document.getElementById('alert-detail').innerHTML=alertDetails(current.snapshot,current.alertDate);bindAlertFilters();calendar.querySelectorAll('[data-alert-date]').forEach(b=>b.addEventListener('click',()=>{current.alertDate=b.dataset.alertDate;refreshCalendar();}));calendar.querySelectorAll('[data-calendar-shift]').forEach(b=>b.addEventListener('click',()=>{const shift=Number(b.dataset.calendarShift),next=new Date(current.calendarMonth.getFullYear(),current.calendarMonth.getMonth()+shift,1),prefix=`${next.getFullYear()}-${String(next.getMonth()+1).padStart(2,'0')}-`,available=Object.keys(current.snapshot.alerts||{}).filter(key=>key.startsWith(prefix)).sort();current.calendarMonth=next;current.alertDate=available[0]||dayKey(next);refreshCalendar();}));const todayButton=calendar.querySelector('[data-calendar-today]');if(todayButton)todayButton.addEventListener('click',()=>{const today=atMidnight(new Date());current.calendarMonth=new Date(today.getFullYear(),today.getMonth(),1);current.alertDate=dayKey(today);refreshCalendar();});}
+    function renderUpload(){document.body.classList.remove('snapshot');app.innerHTML=`<section class="upload-screen"><p class="eyebrow">Generador diario</p><h1>Convierte el informe Excel en un dashboard compartible</h1><p>Carga el archivo <strong>INFORME DIARIO</strong>. Podrás revisar la vista y descargar un único HTML con los datos incorporados.</p><div class="upload-card"><label class="file-label" for="excel-file">Seleccionar archivo Excel</label><input id="excel-file" type="file" accept=".xlsx,.xlsm,application/vnd.ms-excel.sheet.macroEnabled.12,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"><p class="file-note">El archivo se procesa localmente en este navegador.</p><p id="upload-error" class="error" role="alert"></p></div></section>`;document.getElementById('excel-file').addEventListener('change',handleFile);}
+    async function handleFile(e){const file=e.target.files[0];if(!file)return;const error=document.getElementById('upload-error');error.textContent='Leyendo el Excel y generando la vista…';try{const files=await unzip(await file.arrayBuffer());const snapshot=derive(parseWorkbook(files));renderDashboard(snapshot);}catch(err){console.error(err);error.textContent=err.message||'No fue posible procesar el archivo.';}}
+    function downloadSnapshot(){const openTag='<script id="snapshot-data" type="application/json">',closeTag='<\/script>',marker=openTag+closeTag;const data=JSON.stringify(current.snapshot).replace(/</g,'\\u003c');let source='<!doctype html>\n'+document.documentElement.outerHTML;source=source.replace(marker,openTag+data+closeTag);const blob=new Blob([source],{type:'text/html;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`Dashboard Mtto Contratos - ${current.snapshot.cutoff}.html`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+    const embedded=document.getElementById('snapshot-data').textContent.trim();if(embedded){try{renderDashboard(JSON.parse(embedded));}catch(err){console.error(err);app.innerHTML=`<p class="error">El dashboard compartido no se pudo abrir. ${esc(err&&err.message?err.message:'Error desconocido.')}</p>`;}}else renderUpload();
+  })();
+  </script>
+</body>
+</html>
